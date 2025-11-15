@@ -1,71 +1,29 @@
-import telebot
-from datetime import datetime, timedelta
+name: Run Telegram Bot
 
-TOKEN = "اینجا_توکن_ربات_خودت"
-bot = telebot.TeleBot(TOKEN)
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */3 * * *"
 
-# دیتابیس ساده اشتراک‌ها
-users = {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-# محاسبه تاریخ عضویت
-def add_days(d, days):
-    return d + timedelta(days=days)
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.reply_to(message,
-        "سلام 👋\n"
-        "به ربات VIP کریپتو خوش اومدی\n\n"
-        "برای خرید اشتراک از دستور زیر استفاده کن:\n"
-        "/buy\n\n"
-        "برای دیدن وضعیت اشتراکت:\n"
-        "/vip"
-    )
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-@bot.message_handler(commands=['buy'])
-def buy(message):
-    bot.reply_to(message,
-        "💳 پلان‌های اشتراک:\n\n"
-        "1️⃣ ماهانه — 100 تومان\n"
-        "3️⃣ سه ماهه — 180 تومان\n"
-        "1️⃣2️⃣ یک ساله — 500 تومان\n\n"
-        "فعلاً خرید اتوماتیک نیست.\n"
-        "برای فعال‌سازی به آی‌دی ادمین پیام بده:\n"
-        "@YourAdmin"
-    )
+      - name: Install requirements
+        run: |
+          pip install --upgrade pip
+          pip install pyTelegramBotAPI
 
-@bot.message_handler(commands=['vip'])
-def vip(message):
-    user_id = message.from_user.id
-
-    if user_id not in users:
-        bot.reply_to(message, "❌ شما اشتراک فعال ندارید")
-        return
-
-    expire = users[user_id]
-    now = datetime.now()
-
-    if now > expire:
-        bot.reply_to(message, "⚠️ اشتراک شما منقضی شده")
-        return
-
-    bot.reply_to(message, f"✔️ اشتراک شما فعال است\nتاریخ پایان: {expire}")
-
-@bot.message_handler(commands=['add'])
-def add_vip(message):
-    admin_id = message.from_user.id
-    if admin_id != 123456789:   # اینجا آیدی عددی خودت را بزن
-        bot.reply_to(message, "اجازه نداری!")
-        return
-
-    try:
-        parts = message.text.split()
-        user = int(parts[1])
-        days = int(parts[2])
-
-        users[user] = add_days(datetime.now(), days)
-        bot.reply_to(message, f"اشتراک {days} روزه برای کاربر {user} فعال شد")
-    except:
-        bot.reply_to(message, "فرمت درست:\n/add USERID DAYS")
-
-bot.infinity_polling()
+      - name: Run bot
+        run: |
+          python bot.py
